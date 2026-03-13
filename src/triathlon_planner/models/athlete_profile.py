@@ -4,6 +4,7 @@ import pydantic
 import datetime
 from pydantic import BaseModel
 from datetime import date
+from typing import Optional, Literal
 
 Sport = Literal["swim", "bike", "run", "strength", "mobility"]
 PrimaryGoal = Literal[
@@ -26,3 +27,6 @@ FatigueState = Literal["low", "moderate", "high", "very_high"]
 
 class GoalProfile(BaseModel):
     primary_goal: PrimaryGoal
+    priority_discipline: Optional[Sport] = None
+    target_event_type: Optional[TargetEventType] = None
+    target_event_date: Optional[date] = None
