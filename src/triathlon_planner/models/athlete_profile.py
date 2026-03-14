@@ -1,9 +1,7 @@
-import pydantic
-import datetime
-
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from datetime import date
+from uuid import UUID
 
 Sport = Literal["swim", "bike", "run", "strength", "mobility"]
 PrimaryGoal = Literal[
@@ -125,7 +123,7 @@ class DisciplineProfiles(BaseModel):
 
 
 class AthleteProfile(BaseModel):
-    athlete_id: str
+    athlete_id: UUID
     age: int = Field(gt=0, le=100)
     weight_kg: float = Field(gt=0.0, le=300.0)
     goal_profile: GoalProfile
