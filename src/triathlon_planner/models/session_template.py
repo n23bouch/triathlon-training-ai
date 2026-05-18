@@ -18,7 +18,7 @@ CardioZone = Literal["Z1", "Z2", "Z3", "Z4", "Z5"]
 StrengthIntensity = Literal["technique", "light", "moderate", "heavy", "maximal"]
 MobilityIntensity = Literal["passive", "active", "dynamic"]
 BodyPart = Literal[
-    "calf", "hamstring", "quadriceps", "chest", "shoulders", "back", "core", "arms"
+    "calf", "hamstring", "quadriceps", "chest", "shoulders", "back", "core", "arms", "ankles", "hips"
 ]
 Laterality = Literal["unilateral", "bilateral"]
 
@@ -50,6 +50,12 @@ class StrengthBlock(SessionBlock):
     rest_sec: Optional[int] = Field(default=None, gt=0)
     body_part: BodyPart
     laterality: Laterality
+    exercise_name: str = Field(default="Generic Strength Exercise", min_length=1)
+    @model_validator(mode="after")
+    def validate_block(self):
+        if (self.reps_per_set is None) and (self.duration_sec is None):
+            raise ValueError("For strength blocks, either reps_per_set or duration_sec must be provided.")
+        return self
 
 
 class MobilityBlock(SessionBlock):
@@ -57,7 +63,12 @@ class MobilityBlock(SessionBlock):
     intensity: MobilityIntensity
     body_part: BodyPart
     laterality: Laterality
-
+    exercise_name: str = Field(default="Generic Mobility Exercise", min_length=1)
+    @model_validator(mode="after")
+    def validate_block(self):
+        if (self.hold_sec is None) and (self.duration_sec is None):
+            raise ValueError("For mobility blocks, either hold_sec or duration_sec must be provided.")
+        return self
 
 class SessionTemplate(BaseModel):
     template_id: UUID
