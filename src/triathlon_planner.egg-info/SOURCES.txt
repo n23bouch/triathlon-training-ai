@@ -13,3 +13,4 @@ src/triathlon_planner/models/session_template.py
 src/triathlon_planner/rules/__init__.py
 src/triathlon_planner/utils/__init__.py
 tests/test_athlete_profile.py
+tests/test_session_templates.py

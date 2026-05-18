@@ -123,6 +123,7 @@ class DisciplineProfiles(BaseModel):
 
 
 class AthleteProfile(BaseModel):
+    model_config = {"frozen": True}
     athlete_id: UUID
     age: int = Field(gt=0, le=100)
     weight_kg: float = Field(gt=0.0, le=300.0)
