@@ -92,7 +92,7 @@ def test_invalid_session_template_invalid_level_score_range():
             template_id=uuid4(),
             discipline="bike",
             session_type="Tempo",
-            blocks=[CardioBlock(duration_sec=1800, cardio_zone="Tempo", repetitions=1)],
+            blocks=[CardioBlock(duration_sec=1800, cardio_zone="Z3", repetitions=1)],
             target_level_score_min=80.0,
             target_level_score_max=60.0
         )

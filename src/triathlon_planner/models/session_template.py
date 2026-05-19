@@ -18,7 +18,16 @@ CardioZone = Literal["Z1", "Z2", "Z3", "Z4", "Z5"]
 StrengthIntensity = Literal["technique", "light", "moderate", "heavy", "maximal"]
 MobilityIntensity = Literal["passive", "active", "dynamic"]
 BodyPart = Literal[
-    "calf", "hamstring", "quadriceps", "chest", "shoulders", "back", "core", "arms", "ankles", "hips"
+    "calf",
+    "hamstring",
+    "quadriceps",
+    "chest",
+    "shoulders",
+    "back",
+    "core",
+    "arms",
+    "ankles",
+    "hips",
 ]
 Laterality = Literal["unilateral", "bilateral"]
 
@@ -42,6 +51,12 @@ class SessionBlock(BaseModel):
 class CardioBlock(SessionBlock):
     cardio_zone: CardioZone
     departure_interval_sec: Optional[int] = Field(default=None, gt=0)
+    recovery_block: Optional["CardioBlock"] = (
+        None  # For interval sessions, the recovery block can be defined as another CardioBlock
+    )
+
+
+CardioBlock.model_rebuild()  # Needed to resolve the forward reference for recovery_block
 
 
 class StrengthBlock(SessionBlock):
@@ -51,10 +66,13 @@ class StrengthBlock(SessionBlock):
     body_part: BodyPart
     laterality: Laterality
     exercise_name: str = Field(default="Generic Strength Exercise", min_length=1)
+
     @model_validator(mode="after")
     def validate_block(self):
         if (self.reps_per_set is None) and (self.duration_sec is None):
-            raise ValueError("For strength blocks, either reps_per_set or duration_sec must be provided.")
+            raise ValueError(
+                "For strength blocks, either reps_per_set or duration_sec must be provided."
+            )
         return self
 
 
@@ -64,11 +82,15 @@ class MobilityBlock(SessionBlock):
     body_part: BodyPart
     laterality: Laterality
     exercise_name: str = Field(default="Generic Mobility Exercise", min_length=1)
+
     @model_validator(mode="after")
     def validate_block(self):
         if (self.hold_sec is None) and (self.duration_sec is None):
-            raise ValueError("For mobility blocks, either hold_sec or duration_sec must be provided.")
+            raise ValueError(
+                "For mobility blocks, either hold_sec or duration_sec must be provided."
+            )
         return self
+
 
 class SessionTemplate(BaseModel):
     template_id: UUID
