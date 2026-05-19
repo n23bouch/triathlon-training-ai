@@ -2,7 +2,6 @@ import pytest
 
 from pydantic import ValidationError
 from uuid import uuid4
-from typing import get_args
 from datetime import date
 
 from triathlon_planner.models.generated_session import (
@@ -55,6 +54,7 @@ def valid_generated_session():
         ],
     )
 
+
 @pytest.fixture
 def valid_generated_strength_session():
     return GeneratedSession(
@@ -85,6 +85,7 @@ def valid_generated_strength_session():
             ),
         ],
     )
+
 
 @pytest.fixture
 def valid_generated_mobility_session():
@@ -117,12 +118,14 @@ def valid_generated_mobility_session():
         ],
     )
 
+
 # ── Tests : cas valides ───────────────────────────────────────────────────────
 def test_valid_generated_session(valid_generated_session):
     assert valid_generated_session.discipline == "run"
     assert valid_generated_session.blocks[1].cardio_zone == "Z4"
     assert len(valid_generated_session.blocks) == 3
     assert valid_generated_session.schedule_date == date(2026, 7, 1)
+
 
 def test_valid_generated_strength_session(valid_generated_strength_session):
     assert valid_generated_strength_session.discipline == "strength"
@@ -131,12 +134,14 @@ def test_valid_generated_strength_session(valid_generated_strength_session):
     assert len(valid_generated_strength_session.blocks) == 2
     assert valid_generated_strength_session.schedule_date == date(2026, 7, 2)
 
+
 def test_valid_generated_mobility_session(valid_generated_mobility_session):
     assert valid_generated_mobility_session.discipline == "mobility"
     assert valid_generated_mobility_session.blocks[0].intensity == "dynamic"
     assert valid_generated_mobility_session.blocks[1].body_part == "hips"
     assert len(valid_generated_mobility_session.blocks) == 3
     assert valid_generated_mobility_session.schedule_date == date(2026, 7, 3)
+
 
 # ── Tests : cas invalides ─────────────────────────────────────────────────────
 def test_invalid_generated_session_block_no_duration_no_distance():
@@ -147,6 +152,7 @@ def test_invalid_generated_session_block_no_duration_no_distance():
             target_pace_sec_per_km=230.0,
             target_heart_rate_bpm=170,
         )
+
 
 def test_invalid_generated_strength_block_no_reps_no_duration():
     with pytest.raises(ValidationError):
@@ -159,6 +165,7 @@ def test_invalid_generated_strength_block_no_reps_no_duration():
             rpe_target=9.0,
         )
 
+
 def test_invalid_generated_session_block_invalid_cardio_zone():
     with pytest.raises(ValidationError):
         GeneratedCardioBlock(
@@ -167,7 +174,8 @@ def test_invalid_generated_session_block_invalid_cardio_zone():
             repetitions=1,
             target_pace_sec_per_km=320.0,
             target_heart_rate_bpm=150,
-        ) 
+        )
+
 
 def test_invalid_generated_strength_block_invalid_intensity():
     with pytest.raises(ValidationError):
@@ -179,7 +187,8 @@ def test_invalid_generated_strength_block_invalid_intensity():
             rest_sec=120,
             target_weight_kg=80.0,
             rpe_target=9.0,
-        )   
+        )
+
 
 def test_invalid_generated_mobility_block_invalid_intensity():
     with pytest.raises(ValidationError):
@@ -188,6 +197,4 @@ def test_invalid_generated_mobility_block_invalid_intensity():
             body_part="shoulders",
             laterality="bilateral",
             hold_sec=30,
-         )  
-        
-
+        )
