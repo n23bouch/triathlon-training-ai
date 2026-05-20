@@ -17,9 +17,12 @@ def compute_weakest_discipline(athlete: AthleteProfile) -> Sport:
     run_score = athlete.discipline_profiles.run.level_score or 0.0
     bike_score = athlete.discipline_profiles.bike.level_score or 0.0
     swim_score = athlete.discipline_profiles.swim.level_score or 0.0
-    scores = {"run": run_score, "bike": bike_score, "swim": swim_score}
-    weakest = min(scores, key=scores.get)
-    return weakest
+    scores: dict[Sport, float] = {
+        "run": run_score,
+        "bike": bike_score,
+        "swim": swim_score,
+    }
+    return min(scores, key=lambda d: scores[d])
 
 
 def compute_overall_level(athlete: AthleteProfile) -> float:
