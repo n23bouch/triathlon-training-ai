@@ -15,7 +15,12 @@ DayOfWeek = Literal[
     "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
 ]
 AthleteClass = Literal[
-    "beginner", "intermediate_low", "intermediate_mid", "intermediate_high", "advanced"
+    "beginner",
+    "intermediate_low",
+    "intermediate_mid",
+    "intermediate_high",
+    "advanced",
+    "elite",
 ]
 InjuryStatus = Literal["active", "recovering", "sensitive", "history"]
 TargetEventType = Literal["sprint", "olympic", "middle_distance", "long_distance"]
@@ -39,8 +44,10 @@ class Availability(BaseModel):
 
 
 class Injury(BaseModel):
-    area: str
+    name: str
     status: InjuryStatus
+    affected_discipline: Sport
+    severity: Optional[Literal["mild", "moderate", "severe"]] = None
     notes: Optional[str] = None
 
 
