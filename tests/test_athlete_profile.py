@@ -19,7 +19,6 @@ from triathlon_planner.models.athlete_profile import (
     Equipment,
 )
 
-
 # ── Fixture réutilisable ──────────────────────────────────────────────────────
 
 
@@ -83,9 +82,11 @@ def valid_athlete() -> AthleteProfile:
         constraints=Constraints(
             injuries=[
                 Injury(
-                    area="left_knee",
+                    name="LCA surgery",
                     status="sensitive",
-                    notes="LCA operations done in 2019 and 2021",
+                    affected_discipline="run",
+                    severity="moderate",
+                    notes="Operations done in 2019 and 2021",
                 )
             ],
             equipment=Equipment(
@@ -124,9 +125,9 @@ def test_discipline_profiles_scores(valid_athlete):
 
 def test_injury_details(valid_athlete):
     injury = valid_athlete.constraints.injuries[0]
-    assert injury.area == "left_knee"
+    assert injury.name == "LCA surgery"
     assert injury.status == "sensitive"
-    assert injury.notes is not None
+    assert injury.affected_discipline == "run"
 
 
 def test_optional_performance_metrics_can_be_none():
