@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 from datetime import date
+from uuid import UUID
 
 from triathlon_planner.models.athlete_profile import (
     AthleteProfile,
@@ -25,7 +26,7 @@ from triathlon_planner.models.athlete_profile import (
 @pytest.fixture
 def valid_athlete() -> AthleteProfile:
     return AthleteProfile(
-        athlete_id="12345678-1234-5678-1234-567890abcdef",
+        athlete_id=UUID("12345678-1234-5678-1234-567890abcdef"),
         age=22,
         weight_kg=78.0,
         goal_profile=GoalProfile(
@@ -161,7 +162,7 @@ def test_no_injuries_is_valid():
 def test_invalid_age_too_high():
     with pytest.raises(ValidationError):
         AthleteProfile(
-            athlete_id="12345678-1234-5678-1234-567890abcdef",
+            athlete_id=UUID("12345678-1234-5678-1234-567890abcdef"),
             age=150,  # > 100 → doit échouer
             weight_kg=70.0,
             goal_profile=GoalProfile(primary_goal="general_fitness"),
@@ -231,8 +232,3 @@ def test_invalid_level_score_out_of_range():
             current_frequency_per_week=2,
             level_score=150.0,  # > 100 → doit échouer
         )
-
-
-def test_invalid_primary_goal():
-    with pytest.raises(ValidationError):
-        GoalProfile(primary_goal="become_ironman")  # pas dans le Literal

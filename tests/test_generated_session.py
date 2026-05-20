@@ -198,3 +198,9 @@ def test_invalid_generated_mobility_block_invalid_intensity():
             laterality="bilateral",
             hold_sec=30,
         )
+
+def test_recovery_block_is_defined(valid_generated_session):
+    interval_block = valid_generated_session.blocks[1]
+    assert interval_block.recovery_block is not None
+    assert interval_block.recovery_block.distance_m == 500
+    assert interval_block.recovery_block.cardio_zone == "Z2"
