@@ -92,18 +92,115 @@ class MobilityBlock(SessionBlock):
         return self
 
 
+class LevelRange(BaseModel):
+    level_min: float = Field(ge=0.0, le=100.0)
+    level_max: float = Field(ge=0.0, le=100.0)
+    work_volume_sec_min: int = Field(gt=0)
+    work_volume_sec_max: int = Field(gt=0)
+    block_duration_sec_min: int = Field(gt=0)
+    block_duration_sec_max: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_level_range(self):
+        if self.level_min > self.level_max:
+            raise ValueError("level_min must be ≤ level_max.")
+        return self
+    
+    @model_validator(mode="after")
+    def validate_work_volume(self):
+        if self.work_volume_sec_min > self.work_volume_sec_max:
+            raise ValueError("work_volume_sec_min must be ≤ work_volume_sec_max.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_block_duration(self):
+        if self.block_duration_sec_min > self.block_duration_sec_max:
+            raise ValueError("block_duration_sec_min must be ≤ block_duration_sec_max.")
+        return self
+
+class StrengthLevelRange(BaseModel):
+    level_min: float = Field(ge=0.0, le=100.0)
+    level_max: float = Field(ge=0.0, le=100.0)
+    sets_min: int = Field(gt=0)
+    sets_max: int = Field(gt=0)
+    reps_min: int = Field(gt=0)
+    reps_max: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_level_range(self):
+        if self.level_min > self.level_max:
+            raise ValueError("level_min must be ≤ level_max.")
+        return self
+    
+    @model_validator(mode="after")
+    def validate_sets(self):
+        if self.sets_min > self.sets_max:
+            raise ValueError("sets_min must be ≤ sets_max.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_reps(self):
+        if self.reps_min > self.reps_max:
+            raise ValueError("reps_min must be ≤ reps_max.")
+        return self
+
+class CardioTemplateParams(BaseModel):
+    warmup_duration_sec: int = Field(gt=0)
+    warmup_zone: CardioZone
+    work_zone: CardioZone
+    rest_zone: CardioZone
+    rest_ratio: float = Field(gt=0.0)
+    cooldown_duration_sec: int = Field(gt=0)
+    cooldown_zone: CardioZone
+    level_ranges: list[LevelRange]
+    requires_pool: bool = False
+    requires_power_meter: bool = False
+
+    
+class StrengthTemplateParams(BaseModel):
+    movement_pattern: Literal["squatting", "hinging", "pushing", "pulling", "core"]
+    load_intensity: Literal["endurance", "moderate", "heavy"]
+    level_ranges: list[StrengthLevelRange]
+    rest_sec: int = Field(gt=0)
+    unilateral: bool
+    requires_gym: bool
+
+
+class MobilityTemplateParams(BaseModel):
+    target_zone: Literal[
+        "hip_flexor", "ankle", "thoracic", "shoulder", "hamstring", "hip_rotation"
+    ]
+    mobility_type: Literal["dynamic", "active", "passive"]
+    hold_sec: int = Field(gt=0)
+    reps: Optional[int] = None
+    bilateral: bool
+    requires_equipment: Literal["none", "foam_roller", "band"]
+
+
 class SessionTemplate(BaseModel):
     template_id: UUID
     discipline: Sport
     session_type: SessionType
-    blocks: list[CardioBlock | StrengthBlock | MobilityBlock | SessionBlock]
+    name: str
     target_level_score_min: float = Field(ge=0.0, le=100.0)
     target_level_score_max: float = Field(ge=0.0, le=100.0)
+    intensity_category: Literal["low", "medium", "high"]
+    params: CardioTemplateParams | StrengthTemplateParams | MobilityTemplateParams
 
     @model_validator(mode="after")
     def validate_level_score_range(self):
         if self.target_level_score_min > self.target_level_score_max:
-            raise ValueError(
-                "target_level_score_min must be less than or equal to target_level_score_max."
-            )
+            raise ValueError("target_level_score_min must be ≤ target_level_score_max.")
         return self
+    
+    @model_validator(mode="after")
+    def validate_coherence_between_discipline_and_params(self):
+        cardio_sports = ["swim", "bike", "run"]
+        if self.discipline in cardio_sports and not isinstance(self.params, CardioTemplateParams):
+            raise ValueError("For cardio discipline, params must be of type CardioTemplateParams.")
+        if self.discipline == "strength" and not isinstance(self.params, StrengthTemplateParams):
+            raise ValueError("For strength discipline, params must be of type StrengthTemplateParams.")
+        if self.discipline == "mobility" and not isinstance(self.params, MobilityTemplateParams):
+            raise ValueError("For mobility discipline, params must be of type MobilityTemplateParams.")
+        return self
+    
