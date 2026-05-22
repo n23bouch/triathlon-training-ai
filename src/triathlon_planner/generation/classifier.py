@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
-from ..models.athlete_profile import AthleteProfile, Sport, PrimaryGoal
+from typing import Optional
+from ..models.athlete_profile import AthleteProfile, Sport, PrimaryGoal, TargetEventType
 
 
-# 1. Le modèle output du classifier
 class AthleteContext(BaseModel):
     overall_level: float = Field(ge=0.0, le=100.0)
     weakest_discipline: Sport
@@ -10,6 +10,10 @@ class AthleteContext(BaseModel):
     load_factor: float = Field(ge=0.5, le=1.0)
     available_sessions_per_week: int
     primary_goal: PrimaryGoal
+    target_event_type: Optional[TargetEventType] = None
+    priority_discipline: Optional[Sport] = None
+    has_power_meter: bool
+    has_pool_access: bool
 
 
 # 2. Les fonctions de calcul
@@ -76,4 +80,8 @@ def classify(athlete: AthleteProfile) -> AthleteContext:
         weakest_discipline=compute_weakest_discipline(athlete),
         available_sessions_per_week=athlete.availability.sessions_per_week_target,
         primary_goal=athlete.goal_profile.primary_goal,
+        target_event_type=athlete.goal_profile.target_event_type,
+        priority_discipline=athlete.goal_profile.priority_discipline,
+        has_power_meter=athlete.constraints.equipment.has_power_meter,
+        has_pool_access=athlete.constraints.equipment.has_pool_access
     )

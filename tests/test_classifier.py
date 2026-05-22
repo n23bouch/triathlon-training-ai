@@ -7,6 +7,7 @@ from triathlon_planner.generation.classifier import (
     compute_overall_level,
     compute_fatigue_factor,
     compute_load_factor,
+    classify
 )
 from triathlon_planner.models.athlete_profile import (
     AthleteProfile,
@@ -119,7 +120,6 @@ def valid_athlete2() -> AthleteProfile:
         goal_profile=GoalProfile(
             primary_goal="improve_discipline",
             priority_discipline="swim",
-            target_event_type="long_distance",
             target_event_date=date(2026, 7, 12),
         ),
         availability=Availability(
@@ -238,3 +238,21 @@ def test_compute_overall_level2(valid_athlete2):
     overall_level = compute_overall_level(valid_athlete2)
     expected_overall = (70.0 * 0.70 + 92.9 * 0.15 + 80.0 * 0.15) / 1.0
     assert overall_level == pytest.approx(expected_overall)
+
+def test_classify_has_equipment_flags(valid_athlete):
+    context = classify(valid_athlete)
+    assert context.has_power_meter is True
+    assert context.has_pool_access is True
+
+def test_classify_target_event_type(valid_athlete):
+    context = classify(valid_athlete)
+    assert context.target_event_type == "long_distance"
+
+def test_classify_priority_discipline(valid_athlete2):
+    context = classify(valid_athlete2)
+    assert context.priority_discipline == "swim"
+
+def test_classify_no_target_event_general_fitness(valid_athlete2):
+    context = classify(valid_athlete2)
+    assert context.primary_goal == "improve_discipline"
+    assert context.target_event_type is None
