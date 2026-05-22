@@ -2,6 +2,8 @@ import pytest
 from uuid import UUID
 from datetime import date
 
+from triathlon_planner.models.session_template import CardioBlock
+from triathlon_planner.models.generated_session import GeneratedCardioBlock
 from triathlon_planner.models.athlete_profile import (
     AthleteProfile,
     GoalProfile,
@@ -18,12 +20,7 @@ from triathlon_planner.models.athlete_profile import (
     Equipment,
     TrainingState,
 )
-from triathlon_planner.generation.calculator import (
-    pace_from_zone,
-    watts_from_zone,
-    heart_rate_from_zone,
-    swim_pace_from_zone,
-)
+from triathlon_planner.generation.block_builder import generate_cardio_block
 
 
 # ── Fixture réutilisable ──────────────────────────────────────────────────────
@@ -198,70 +195,135 @@ def valid_athlete_no_performance_metrics() -> AthleteProfile:
     )
 
 
-# ── Tests unitaires pour les fonctions de calcul ────────────────────
+def test_generate_cardio_block_run(valid_athlete):
+    generated_block = generate_cardio_block(
+        block=CardioBlock(cardio_zone="Z2", duration_sec=1200, repetitions=1),
+        discipline="run",
+        athlete=valid_athlete,
+    )
+
+    assert generated_block.target_pace_sec_per_km is not None
+    expected_pace = round(
+        (
+            valid_athlete.discipline_profiles.run.performance_metrics.threshold_pace_sec_per_km
+            * 1.14
+            + valid_athlete.discipline_profiles.run.performance_metrics.threshold_pace_sec_per_km
+            * 1.28
+        )
+        / 2
+    )
+    assert generated_block.target_pace_sec_per_km == pytest.approx(expected_pace)
+
+    assert generated_block.target_heart_rate_bpm is not None
+    expected_hr = round(
+        (
+            valid_athlete.discipline_profiles.run.performance_metrics.threshold_heart_rate_bpm
+            * 0.75
+            + valid_athlete.discipline_profiles.run.performance_metrics.threshold_heart_rate_bpm
+            * 0.85
+        )
+        / 2
+    )
+    assert generated_block.target_heart_rate_bpm == pytest.approx(expected_hr)
 
 
-def test_pace_from_zone(valid_athlete):
-    run_metrics = valid_athlete.discipline_profiles.run.performance_metrics
-    assert run_metrics is not None
-    threshold_pace = run_metrics.threshold_pace_sec_per_km
-    assert threshold_pace is not None
+def test_generate_cardio_block_bike(valid_athlete):
+    # On passe un CardioBlock simple avec recovery_block — pas un GeneratedCardioBlock
+    generated_block = generate_cardio_block(
+        block=CardioBlock(
+            cardio_zone="Z5",
+            duration_sec=60,
+            repetitions=5,
+            recovery_block=CardioBlock(
+                cardio_zone="Z1",
+                duration_sec=120,
+                repetitions=1,
+            ),
+        ),
+        discipline="bike",
+        athlete=valid_athlete,
+    )
 
-    pace_z2 = pace_from_zone("Z2", threshold_pace)
-    expected_z2 = (threshold_pace * 1.14 + threshold_pace * 1.28) / 2
-    assert pace_z2 == pytest.approx(expected_z2)
+    # Vérification du bloc principal (Z5 bike)
+    assert generated_block.target_power_watts is not None
+    expected_watts = round(
+        valid_athlete.discipline_profiles.bike.performance_metrics.ftp_watts * 1.10
+    )
+    assert generated_block.target_power_watts == pytest.approx(expected_watts)
 
+    assert generated_block.target_heart_rate_bpm is not None
+    expected_hr = round(
+        valid_athlete.discipline_profiles.bike.performance_metrics.threshold_heart_rate_bpm
+        * 1.07
+    )
+    assert generated_block.target_heart_rate_bpm == pytest.approx(expected_hr)
 
-def test_watts_from_zone(valid_athlete):
-    bike_metrics = valid_athlete.discipline_profiles.bike.performance_metrics
-    assert bike_metrics is not None
-    ftp_watts = bike_metrics.ftp_watts
-    assert ftp_watts is not None
+    # Vérification que le recovery_block a été généré récursivement
+    assert generated_block.recovery_block is not None
+    assert isinstance(generated_block.recovery_block, GeneratedCardioBlock)
 
-    watts_z3 = watts_from_zone("Z3", ftp_watts)
-    expected_z3 = (ftp_watts * 0.76 + ftp_watts * 0.90) / 2
-    assert watts_z3 == pytest.approx(expected_z3)
+    # Vérification des valeurs calculées du recovery_block (Z1 bike)
+    expected_recovery_watts = round(
+        valid_athlete.discipline_profiles.bike.performance_metrics.ftp_watts * 0.50
+    )
+    assert generated_block.recovery_block.target_power_watts == pytest.approx(
+        expected_recovery_watts
+    )
 
-
-def test_watts_from_zone1(valid_athlete):
-    bike_metrics = valid_athlete.discipline_profiles.bike.performance_metrics
-    assert bike_metrics is not None
-    ftp_watts = bike_metrics.ftp_watts
-    assert ftp_watts is not None
-
-    watts_z1 = watts_from_zone("Z1", ftp_watts)
-    expected_z1 = ftp_watts * 0.50  # Z1 watts : < 55% FTP → valeur cible ~50% FTP
-    assert watts_z1 == pytest.approx(expected_z1)
-
-
-def test_heart_rate_from_zone(valid_athlete):
-    run_metrics = valid_athlete.discipline_profiles.run.performance_metrics
-    assert run_metrics is not None
-    threshold_hr = run_metrics.threshold_heart_rate_bpm
-    assert threshold_hr is not None
-
-    hr_z4 = heart_rate_from_zone("Z4", threshold_hr)
-    expected_z4 = (threshold_hr * 0.95 + threshold_hr * 1.02) / 2
-    assert hr_z4 == pytest.approx(expected_z4)
-
-
-def test_heart_rate_from_zone5(valid_athlete):
-    run_metrics = valid_athlete.discipline_profiles.run.performance_metrics
-    assert run_metrics is not None
-    threshold_hr = run_metrics.threshold_heart_rate_bpm
-    assert threshold_hr is not None
-
-    hr_z5 = heart_rate_from_zone("Z5", threshold_hr)
-    expected_z5 = threshold_hr * 1.07  # Z5 FC : > 102% → valeur cible ~107%
-    assert hr_z5 == pytest.approx(expected_z5)
+    expected_recovery_hr = round(
+        valid_athlete.discipline_profiles.bike.performance_metrics.threshold_heart_rate_bpm
+        * 0.70
+    )
+    assert generated_block.recovery_block.target_heart_rate_bpm == pytest.approx(
+        expected_recovery_hr
+    )
 
 
-def test_swim_pace_from_zone(valid_athlete):
-    swim_metrics = valid_athlete.discipline_profiles.swim.performance_metrics
-    assert swim_metrics is not None
-    css_pace = swim_metrics.css_pace_sec_per_100m
-    assert css_pace is not None
+def test_generate_cardio_block_swim(valid_athlete):
+    generated_block = generate_cardio_block(
+        block=CardioBlock(cardio_zone="Z3", duration_sec=900, repetitions=1),
+        discipline="swim",
+        athlete=valid_athlete,
+    )
 
-    pace_z5 = swim_pace_from_zone("Z5", css_pace)
-    expected_z5 = (css_pace * 0.94 + css_pace * 0.87) / 2
-    assert pace_z5 == pytest.approx(expected_z5)
+    assert generated_block.target_pace_sec_per_100m is not None
+    expected_pace = round(
+        (
+            valid_athlete.discipline_profiles.swim.performance_metrics.css_pace_sec_per_100m
+            * 1.05
+            + valid_athlete.discipline_profiles.swim.performance_metrics.css_pace_sec_per_100m
+            * 1.14
+        )
+        / 2
+    )
+    assert generated_block.target_pace_sec_per_100m == pytest.approx(expected_pace)
+
+    # Vérification du fallback sur la FC de course à pied
+    assert generated_block.target_heart_rate_bpm is not None
+    expected_hr = round(
+        (
+            valid_athlete.discipline_profiles.run.performance_metrics.threshold_heart_rate_bpm
+            * 0.85
+            + valid_athlete.discipline_profiles.run.performance_metrics.threshold_heart_rate_bpm
+            * 0.95
+        )
+        / 2
+    )
+    assert generated_block.target_heart_rate_bpm == pytest.approx(expected_hr)
+
+
+def test_generate_cardio_block_fallback_no_performance_metrics(
+    valid_athlete_no_performance_metrics,
+):
+    generated_block = generate_cardio_block(
+        block=CardioBlock(cardio_zone="Z2", duration_sec=1200, repetitions=1),
+        discipline="run",
+        athlete=valid_athlete_no_performance_metrics,
+    )
+
+    # Sans threshold_pace, l'allure doit être None
+    assert generated_block.target_pace_sec_per_km is None
+    # Mais la FC est calculée depuis threshold_heart_rate_bpm disponible
+    assert generated_block.target_heart_rate_bpm is not None
+    expected_hr = round((178 * 0.75 + 178 * 0.85) / 2)
+    assert generated_block.target_heart_rate_bpm == pytest.approx(expected_hr)
