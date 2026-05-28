@@ -70,7 +70,7 @@ def valid_strength_session_template():
                     level_max=60.0,
                     sets_min=3,
                     sets_max=5,
-                    reps_min=8,
+                    reps_min=8,  # explicite car optionnel maintenant
                     reps_max=12,
                 )
             ],
@@ -126,6 +126,7 @@ def test_valid_strength_template_params(valid_strength_session_template):
     assert params.movement_pattern == "pushing"
     assert params.load_intensity == "heavy"
     assert params.level_ranges[0].sets_min == 3
+    assert params.level_ranges[0].reps_max is not None
     assert params.level_ranges[0].reps_max == 12
 
 
@@ -277,24 +278,41 @@ def test_invalid_discipline_params_mismatch():
         )
 
 
-def test_invalid_cardio_template_params_rest_ratio_zero():
+def test_invalid_strength_level_range_hold_duration():
     with pytest.raises(ValidationError):
-        CardioTemplateParams(
-            warmup_duration_sec=900,
-            warmup_zone="Z1",
-            work_zone="Z4",
-            rest_zone="Z2",
-            rest_ratio=0.0,  # ❌ doit être > 0
-            cooldown_duration_sec=300,
-            cooldown_zone="Z1",
-            level_ranges=[
-                LevelRange(
-                    level_min=50.0,
-                    level_max=80.0,
-                    work_volume_sec_min=900,
-                    work_volume_sec_max=1800,
-                    block_duration_sec_min=300,
-                    block_duration_sec_max=600,
-                )
-            ],
+        StrengthLevelRange(
+            level_min=0,
+            level_max=50,
+            sets_min=2,
+            sets_max=4,
+            reps_min=1,
+            reps_max=1,
+            hold_duration_sec_min=60,
+            hold_duration_sec_max=30,  # min > max ❌
+        )
+
+
+def test_invalid_strength_level_range_no_reps_no_hold():
+    with pytest.raises(ValidationError):
+        StrengthLevelRange(
+            level_min=0,
+            level_max=50,
+            sets_min=2,
+            sets_max=3,
+            # ni reps ni hold → doit échouer
+        )
+
+
+def test_invalid_strength_level_range_both_reps_and_hold():
+    with pytest.raises(ValidationError):
+        StrengthLevelRange(
+            level_min=0,
+            level_max=50,
+            sets_min=2,
+            sets_max=3,
+            reps_min=10,
+            reps_max=15,
+            hold_duration_sec_min=30,
+            hold_duration_sec_max=60,
+            # les deux à la fois → doit échouer
         )
